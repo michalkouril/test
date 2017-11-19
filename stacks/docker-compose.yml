@@ -1,0 +1,118 @@
+version: '3'
+services:
+  proxy:
+    image: dockercloud/haproxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+     - "80"
+     - "1936"
+    environment:
+     - TIMEOUT=connect 5000, client 600000, server 600000
+     - EXTRA_FRONTEND_SETTINGS_80=acl is_root path -i /, redirect code 301 location /ilincs/ if is_root
+    depends_on:
+      - tomcat
+      - strongpm
+      - shiny_volcano
+      - shiny_volcanosig
+      - shiny_volcanomulti
+      - shiny_complexheatmap
+      - shiny_pca
+      - rserve
+      - opencpu
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+  tomcat:
+    image: shiny.ilincs.org:5000/genomicsportals
+    volumes:
+      - /mnt/raiddev/tmp:/data/srv/www/htdocs/tmp
+    environment:
+      - SERVICE_PORTS=8080
+      - VIRTUAL_HOST=/GenomicsPortals/*
+  strongpm:
+    image: shiny.ilincs.org:5000/ilincshybriddev
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+      - /mnt/raiddev/tmp:/data/srv/www/htdocs/tmp
+    environment:
+      - SERVICE_PORTS=3001
+      - VIRTUAL_HOST=/ilincs/*,/api/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /ilincs/(.*)     \1\ /\2,rspadd X-Frame-Options:\ SAMEORIGIN
+  nginx:
+    image: nginx
+    volumes:
+      - /mnt/raiddev/tmp:/usr/share/nginx/html/tmp
+    environment:
+      - SERVICE_PORTS=80
+      - VIRTUAL_HOST=/tmp/*
+  shiny_volcano:
+    image: shiny.ilincs.org:5000/shiny_volcano
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+    environment:
+      - SERVICE_PORTS=3838
+      - COOKIE=C_VOLCANO insert indirect nocache
+      - VIRTUAL_HOST=/apps/volcano/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /apps/volcano/(.*)     \1\ /\2
+  shiny_volcanosig:
+    image: shiny.ilincs.org:5000/shiny_volcanosig
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+    environment:
+      - SERVICE_PORTS=3838
+      - COOKIE=C_VOLCANOSIG insert indirect nocache
+      - VIRTUAL_HOST=/apps/volcanosig/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /apps/volcanosig/(.*)     \1\ /\2
+  shiny_volcanomulti:
+    image: shiny.ilincs.org:5000/shiny_volcanomulti
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+    environment:
+      - SERVICE_PORTS=3838
+      - COOKIE=C_VOLCANOMULTI insert indirect nocache
+      - VIRTUAL_HOST=/apps/volcanomulti/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /apps/volcanomulti/(.*)     \1\ /\2
+  shiny_complexheatmap:
+    image: shiny.ilincs.org:5000/shiny_complexheatmap
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+    environment:
+      - SERVICE_PORTS=3838
+      - COOKIE=C_COMPLEXHEATMAP insert indirect nocache
+      - VIRTUAL_HOST=/apps/complexheatmap/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /apps/complexheatmap/(.*)     \1\ /\2
+  shiny_heatmap:
+    image: shiny.ilincs.org:5000/shiny_heatmap
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+      - /opt/22raid10:/opt/raid10
+    environment:
+      - SERVICE_PORTS=3838
+      - COOKIE=C_HEATMAP insert indirect nocache
+      - VIRTUAL_HOST=/apps/precomputed/heatmap/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /apps/precomputed/heatmap/(.*)     \1\ /\2
+  shiny_pca:
+    image: shiny.ilincs.org:5000/shiny_pca
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+      - /opt/22raid10:/opt/raid10
+    environment:
+      - SERVICE_PORTS=3838
+      - COOKIE=C_PCA insert indirect nocache
+      - VIRTUAL_HOST=/apps/precomputed/pca/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /apps/precomputed/pca/(.*)     \1\ /\2
+  rserve:
+    image: shiny.ilincs.org:5000/ilincsr-rserve:3.3.1
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+      - /opt/22raid10:/opt/raid10
+  opencpu:
+    image: shiny.ilincs.org:5000/ilincs/ilincsr:1.9.78
+    volumes:
+      - /mnt/raiddev/tmp:/mnt/raid/tmp
+      - /opt/22raid10:/opt/raid10
+    environment:
+      - SERVICE_PORTS=8080
+      - VIRTUAL_HOST=/apps/ocpu/*
+      - EXTRA_SETTINGS=reqirep ^([^\ :]*)\ /apps/ocpu/(.*)     \1\ /ocpu/\2
